@@ -1,13 +1,13 @@
 module NNlib
 
-export σ, relu, softmax
+# Include our Activation functions
+include("activations.jl")
 
-σ(x) = 1 / (1 + exp(-x))
+# Get normalization like batchnorm
+include("normalization.jl")
 
-relu(x) = max(0, x)
+# Conv2D and friends
+include("convolutional.jl")
 
-softmax(xs::AbstractVector) = exp.(xs) ./ sum(exp.(xs))
-
-softmax(xs::AbstractMatrix) = exp.(xs) ./ sum(exp.(xs), 1)
 
 end # module
