@@ -1,3 +1,4 @@
+# Linear layers such as the affine layer
 @multiexport affine
 
 function affine!(out, xs, W, b)

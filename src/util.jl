@@ -1,3 +1,5 @@
+# Various helpful macros and utilities
+
 """
 Helper macro to generate non-inplace versions of functions.
 
