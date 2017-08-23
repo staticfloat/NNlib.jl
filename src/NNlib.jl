@@ -1,13 +1,11 @@
 module NNlib
 
-# Include our Activation functions
+# First, our utility functions
+include("util.jl")
+
+# Include the various types of functions/layers we're interested in
 include("activations.jl")
-
-# Get normalization like batchnorm
+include("linear.jl")
 include("normalization.jl")
-
-# Conv2D and friends
 include("convolutional.jl")
-
-
 end # module
