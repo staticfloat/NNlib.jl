@@ -10,7 +10,8 @@ end
 function ∇σ!(out, Δ, xs)
     s = σ(xs)
     l = one(eltype(xs))
-    out .= Δ .* s .* (l - s)
+    out[1] .= Δ .* s .* (l - s)
+    return out
 end
 @outplace ∇σ(Δ, xs)
 # Also provide `sigmoid(x)` if the user doesn't like unicode as much
@@ -26,47 +27,42 @@ function relu!(out, xs)
 end
 @outplace relu(xs)
 function ∇relu!(out, Δ, xs)
-    out .= Δ .* (xs .> zero(eltype(xs)))
+    out[1] .= Δ .* (xs .> zero(eltype(xs)))
+    return out
 end
 @outplace ∇relu(Δ, xs)
 
 
 # Exponential Linear Unit
-function elu!(out, xs, α)
+function elu!(out, xs, α=one(eltype(xs)))
     select = xs .> 0
     l = one(eltype(xs))
     out .= xs .* select + α .* (exp.(xs) - l) .* .~select
 end
-elu!(out, xs) = elu!(out, xs, one(eltype(xs)))
-@outplace elu(xs, α)
-@outplace elu(xs)
-function ∇elu!(out, xs, α)
+@outplace elu(xs, α=one(eltype(xs)))
+function ∇elu!(out, Δ, xs, α=one(eltype(xs)))
     select = xs .> 0
     l = one(eltype(xs))
-    out .= l .* select + α .* (exp.(xs) - l) .* .~select
+    out[1] .= Δ .* l .* select + α .* (exp.(xs) - l) .* .~select
+    return out
 end
-∇elu!(out, xs) = ∇elu!(out, xs, one(eltype(xs)))
-@outplace ∇elu(out, xs, α)
-@outplace ∇elu(out, xs)
+@outplace ∇elu(Δ, xs, α=one(eltype(xs)))
 
 
 # Scaled Exponential Linear Unit (default α and λ to the values from the paper)
-function selu!(out, xs, α, λ)
+function selu!(out, xs, α=eltype(xs)(1.67326), λ=eltype(xs)(1.0507))
     select = xs .> 0
     l = one(eltype(xs))
     out .= λ .* (xs .* select + α .* (exp.(xs) - l) .* .~select)
 end
-selu!(out, xs) = selu!(out, xs, eltype(xs)(1.67326), eltype(xs)(1.0507))
-@outplace selu(xs, α, λ)
-@outplace selu(xs)
-function ∇selu!(out, xs, α, λ)
+@outplace selu(xs, α=eltype(xs)(1.67326), λ=eltype(xs)(1.0507))
+function ∇selu!(out, Δ, xs, α=eltype(xs)(1.67326), λ=eltype(xs)(1.0507))
     select = xs .> 0
     l = one(eltype(xs))
-    out .= λ .* (l .* select + α .* (exp.(xs) - l) .* .~select)
+    out[1] .= Δ .* λ .* (l .* select + α .* (exp.(xs) - l) .* .~select)
+    return out
 end
-∇selu!(out, xs) = ∇selu!(out, xs, eltype(xs)(1.67326), eltype(xs)(1.0507))
-@outplace ∇selu!(xs, α, λ)
-@outplace ∇selu!(xs)
+@outplace ∇selu!(Δ, xs, α=eltype(xs)(1.67326), λ=eltype(xs)(1.0507))
 
 
 # Softmax activation, summing across first axis if given Matrix
@@ -76,6 +72,7 @@ end
 @outplace softmax(xs)
 function ∇softmax!(out, Δ, xs)
     s = sum(exp, xs, 1)
-    out .= exp.(xs)./s.*(Δ .- sum(Δ .* exp.(xs), 1)./s)
+    out[1] .= exp.(xs)./s.*(Δ .- sum(Δ .* exp.(xs), 1)./s)
+    return out
 end
 @outplace ∇softmax(Δ, xs)
