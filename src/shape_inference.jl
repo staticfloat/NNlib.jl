@@ -22,6 +22,10 @@ Note that applying `infer_shape()` to an inplace function such as `affine!()`
 does not typically make sense, as one of the arguments to `affine!()` is the
 output array itself; to determine the size of the output array you must use,
 apply `infer_shape()` to the outplace function, i.e. `affine()`.
+
+Note that applying `infer_shape()` to a gradient function (e.g. a function
+with a name starting with `∇`) will return a tuple of shapes, one for each
+parameter.
 """
 function infer_shape(func::Function, args...)
     # We first infer (har har) whether this function is an inplace function
@@ -36,8 +40,10 @@ function infer_shape(func::Function, args...)
         arg_idx += 1
     end
     if fname[1] == '∇'
-        # Skip `Δ`
+        # Skip `Δ`, then just return the shapes of all the inputs:
         arg_idx += 1
+
+        return (size(param) for param in args[arg_idx:end])
     end
 
     # Assert that we're not about to push past the end of `args`

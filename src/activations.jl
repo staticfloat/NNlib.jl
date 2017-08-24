@@ -62,7 +62,7 @@ function ∇selu!(out, Δ, xs, α=eltype(xs)(1.67326), λ=eltype(xs)(1.0507))
     out[1] .= Δ .* λ .* (l .* select + α .* (exp.(xs) - l) .* .~select)
     return out
 end
-@outplace ∇selu!(Δ, xs, α=eltype(xs)(1.67326), λ=eltype(xs)(1.0507))
+@outplace ∇selu(Δ, xs, α=eltype(xs)(1.67326), λ=eltype(xs)(1.0507))
 
 
 # Softmax activation, summing across first axis if given Matrix

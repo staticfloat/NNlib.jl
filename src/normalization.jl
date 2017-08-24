@@ -3,7 +3,7 @@
 
 # Batch normalization
 function batchnorm!(out, xs, μ, σ, β, γ)
-    out .= γ .* (xs .- μ) ./ sqrt(σ .+ eps(eltype(σ))) .+ β
+    out .= γ .* (xs .- μ) ./ sqrt.(σ .+ eps(eltype(σ))) .+ β
 end
 @outplace batchnorm(xs, μ, σ, β, γ)
 
