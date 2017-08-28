@@ -27,9 +27,7 @@ function conv2d!(out, xs, W, padding_mode=:SAME)
         size_pad = collect(size(xs))
         size_pad[1] += 2*hks_y
         size_pad[2] += 2*hks_x
-        xs_pad = zeros(eltype(xs), size_pad...)
-        xs_pad[1+hks_y:end-hks_y, 1+hks_x:end-hks_x,:] = xs
-        xs = xs_pad
+        xs = zeropad(xs, [(hks_y, hks_y), (hks_x, hks_x), (0, 0)])
     end
 
     k_yl = size(W,3)
@@ -60,6 +58,16 @@ function conv2d!(out, xs, W, padding_mode=:SAME)
     return out
 end
 @outplace conv2d(xs, W, padding_mode=:SAME)
+
+function ∇conv2d!(out, Δ, xs, W, padding_mode=:SAME)
+    # dx
+    W_t = permutedims(W, [4, 2, 3, 1])[:,end:-1:1,end:-1:1,:]
+    conv2d!(out[1], Δ, W_t, :SAME)
+
+    # dW
+    conv2d!(out[2], xs, Δ, padding_mode)
+end
+@outplace ∇conv2d(Δ, xs, W, padding_mode=:SAME)
 
 function infer_shape(::typeof(conv2d), xs, W, padding_mode=:SAME)
     shape = collect(size(xs))

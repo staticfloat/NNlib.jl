@@ -25,7 +25,8 @@ apply `infer_shape()` to the outplace function, i.e. `affine()`.
 
 Note that applying `infer_shape()` to a gradient function (e.g. a function
 with a name starting with `∇`) will return a tuple of shapes, one for each
-parameter.
+parameter, set to shapes of the input parameters, as gradients must match the
+shapes of the input parameters.
 """
 function infer_shape(func::Function, args...)
     # We first infer (har har) whether this function is an inplace function

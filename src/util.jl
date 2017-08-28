@@ -1,4 +1,5 @@
 # Various helpful macros and utilities
+export zeropad
 
 """
 Helper macro to generate non-inplace versions of functions.
@@ -16,7 +17,7 @@ shape for the new `out` that is generated.  See `infer_shape()` for details on
 shape inferrence and how that works/is defined.
 """
 macro outplace(e)
-    # Generate the inplace name which does have the `!` at the end
+    # Generate the inplace name which has the `!` at the end
     fname = esc(Symbol(e.args[1],:!))
 
     # Arguments can only be optional, we don't do kwargs.  So strip away the
@@ -32,7 +33,11 @@ macro outplace(e)
     args = esc.(e.args[2:end])
     dekw_args = esc.(dekw.(e.args[2:end]))
 
-    # Infer the shape and type for this invocation.
+    # Infer the shape and type for this invocation.  This is not knowabale in
+    # general, and so we sub out to `infer_shape()`.  For forward pass, the
+    # `infer_shape()` function defaults to an array of the same shape as the
+    # first input argument, for backward pass, the default is a tuple of arrays
+    # with each the same shape as its corresponding input.
     shape = :(infer_shape($(e.args[1]), $(dekw_args...)))
     t = :(eltype($(args[1])))
     new_out = :(similar($(args[1]), $(t), $(shape)))
@@ -88,4 +93,33 @@ function sum_to_rank(x, r)
         x = squeeze(sum(x, 1), 1)
     end
     return x
+end
+
+
+"""
+Zeropad `x` with `sizes`, where `sizes` is a list of tuples denoting the number
+of zeroes to insert before and after each axis.  Example:
+
+    zeropad(randn(2,2,2), [(0, 2), (2, 1), (0, 0)])
+
+will result in an output of shape `(4, 5, 2)`, with the last two slices of the
+first dimension all being zero, and the first two and last one slices of the 
+second dimension all being zero.
+"""
+function zeropad(x, sizes)
+    # Calculate the total output size
+    size_pad = collect(size(x))
+    for idx in 1:length(sizes)
+        size_pad[idx] += sizes[idx][1] + sizes[idx][2]
+    end
+
+    # Create zeroed-out placeholder
+    x_pad = zeros(eltype(x), size_pad...)
+
+    # Slap `x` into `x_pad`
+    x_pad_idxs = (1+sizes[i][1] : sizes[i][1]+size(x,i) for i in 1:ndims(x))
+    x_pad[x_pad_idxs...] = x
+
+    # Return the padded result
+    return x_pad
 end
