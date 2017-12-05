@@ -20,12 +20,17 @@ macro outplace(e)
     # Generate the inplace name which has the `!` at the end
     fname = esc(Symbol(e.args[1],:!))
 
+    # Return true if the given argument is a keyword argument
+    function is_kw(arg)
+        return typeof(arg) <: Expr && arg.head == :kw
+    end
+
     # Arguments can only be optional, we don't do kwargs.  So strip away the
     # right hand side of the default args when generating the actual call to
     # the inplace version of the function, otherwise Julia thinks we want to
     # set kwargs:
     function dekw(arg)
-        if typeof(arg) <: Expr && arg.head == :kw
+        if is_kw(arg)
             return arg.args[1]
         end
         return arg
@@ -33,17 +38,32 @@ macro outplace(e)
     args = esc.(e.args[2:end])
     dekw_args = esc.(dekw.(e.args[2:end]))
 
-    # Infer the shape and type for this invocation.  This is not knowabale in
-    # general, and so we sub out to `infer_shape()`.  For forward pass, the
-    # `infer_shape()` function defaults to an array of the same shape as the
-    # first input argument, for backward pass, the default is a tuple of arrays
-    # with each the same shape as its corresponding input.
-    shape = :(infer_shape($(e.args[1]), $(dekw_args...)))
+    # We also need to know the type to create for output buffers
     t = :(eltype($(args[1])))
-    new_out = :(similar($(args[1]), $(t), $(shape)))
 
-    return quote
-        $(esc(e.args[1]))($(args...)) = $(fname)($(new_out), $(dekw_args...))
+    # Infer the shape and type for this invocation.  This is not knowabale in
+    # general, and so we sub out to `infer_shape()`.  We also split our
+    # behavior depending on whether this is a forward-pass function, or a back-
+    # propagation function:
+    if String(e.args[1])[1] == '∇'
+        # For backward pass, we don't actually need to call `infer_shape()`,
+        # so we don't so as to make this less complicated, since `similar()`
+        # will automatically use the right shape:
+        new_out = [:(similar($(args[idx]), eltype($(args[idx]))))
+                   for idx in 2:length(args) if !is_kw(e.args[idx+1])]
+        return quote
+            $(esc(e.args[1]))($(args...)) = $(fname)(tuple($(new_out...)),
+                                                           $(dekw_args...))
+        end
+    else
+        # For forward pass, the `infer_shape()` function defaults to tuple
+        # containing the same shape as the first input argument
+        shape = :(infer_shape($(e.args[1]), $(dekw_args...)))
+        new_out = :(similar($(args[1]), $(t), $(shape)))
+        return quote
+            $(esc(e.args[1]))($(args...)) = $(fname)($(new_out),
+                                                     $(dekw_args...))
+        end
     end
 end
 

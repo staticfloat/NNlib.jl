@@ -44,7 +44,7 @@ function infer_shape(func::Function, args...)
         # Skip `Δ`, then just return the shapes of all the inputs:
         arg_idx += 1
 
-        return (size(param) for param in args[arg_idx:end])
+        return tuple((size(param) for param in args[arg_idx:end])...)
     end
 
     # Assert that we're not about to push past the end of `args`
